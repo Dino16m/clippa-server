@@ -1,6 +1,6 @@
 # Clippa Server
 
-Clippa server is the backend service for a clipboard sharing client. It facilitates the creation and management of "parties," which are secure groups for real-time communication between members using WebSockets.
+Clippa server is the backend service for a clipboard sharing client. It facilitates the creation and management of "parties" which are secure groups for real-time clipboard sharing between members using WebSockets.
 
 ## Features
 
@@ -133,6 +133,7 @@ Once a WebSocket connection is established, clients can send and receive message
 - `pong`: A response to a ping message.
 - `vote`: A message containing ballots for leader election.
 - `set-leader`: A message to set the leader of the party. Setting a leader allows clients to designate a local address reachable to all the clients and allows clients to take the party to their local network.
+- `leader-elected`: A message to notify party members of the poll result
 - `clipboard`: A message containing clipboard content.
 - `joined`: A notification that a member has joined the party.
 - `left`: A notification that a member has left the party.
