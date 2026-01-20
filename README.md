@@ -59,6 +59,28 @@ To run the server, execute the following command from the root of the project:
 go run ./cmd/main.go
 ```
 
+## Docker
+
+You can also run the server in a Docker container.
+
+### Build the Image
+
+To build the Docker image, run the following command from the root of the project:
+
+```sh
+docker build -t clippa-server .
+```
+
+### Run the Container
+
+To run the Docker container, use the following command:
+
+```sh
+docker run -p 8080:8080 -d clippa-server
+```
+
+This will start the server and map port 8080 on your host to port 8080 in the container.
+
 ## API Reference
 
 ### Create Party
