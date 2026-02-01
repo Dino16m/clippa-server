@@ -10,16 +10,18 @@ import (
 type MessageType string
 
 const (
-	Conclave      MessageType = "conclave"
-	Ping          MessageType = "ping"
-	Pong          MessageType = "pong"
-	Vote          MessageType = "vote"
-	SetLeader     MessageType = "set-leader"
-	LeaderElected MessageType = "leader-elected"
-	Clipboard     MessageType = "clipboard"
-	Joined        MessageType = "joined"
-	Left          MessageType = "left"
-	Error         MessageType = "error"
+	Conclave          MessageType = "conclave"
+	Inconclusive      MessageType = "inconclusive"
+	Ping              MessageType = "ping"
+	Pong              MessageType = "pong"
+	Vote              MessageType = "vote"
+	SetLeader         MessageType = "set-leader"
+	LeaderElected     MessageType = "leader-elected"
+	LeaderUnreachable MessageType = "leader-unreachable"
+	Clipboard         MessageType = "clipboard"
+	Joined            MessageType = "joined"
+	Left              MessageType = "left"
+	Error             MessageType = "error"
 )
 
 var (
@@ -27,12 +29,18 @@ var (
 	ErrLeaderNotSet   = errors.New("LEADER_NOT_SET")
 )
 
-type UnitMsg struct{}
+type UnitData struct{}
 type ErrorData struct {
 	Error string `json:"error"`
 }
+
+type InconclusiveData struct {
+	Generation string `json:"generation"`
+}
+
 type ConclaveData struct {
-	Addresses []string `json:"addresses"`
+	Addresses  []string `json:"addresses"`
+	Generation string   `json:"generation"`
 }
 
 type Ballot struct {
@@ -42,11 +50,13 @@ type Ballot struct {
 }
 
 type VoteData struct {
-	Ballots []Ballot `json:"ballots"`
+	Ballots    []Ballot `json:"ballots"`
+	Generation string   `json:"generation"`
 }
 
 type SetLeaderData struct {
-	Address string `json:"address"`
+	Address    string `json:"address"`
+	Generation string `json:"generation"`
 }
 
 type ClipboardData struct {
@@ -74,8 +84,8 @@ func ErrorMessage(msg string) []byte {
 }
 
 func JoinedMessage(sender string) []byte {
-	response := Message[UnitMsg]{
-		Data:        UnitMsg{},
+	response := Message[UnitData]{
+		Data:        UnitData{},
 		Sender:      sender,
 		MessageType: Joined,
 		CreatedAt:   time.Now().UTC().Unix(),
@@ -86,8 +96,8 @@ func JoinedMessage(sender string) []byte {
 }
 
 func LeftMessage(sender string) []byte {
-	response := Message[UnitMsg]{
-		Data:        UnitMsg{},
+	response := Message[UnitData]{
+		Data:        UnitData{},
 		Sender:      sender,
 		MessageType: Left,
 		CreatedAt:   time.Now().UTC().Unix(),
@@ -119,10 +129,12 @@ func validateMessage(msgType MessageType, raw []byte) (any, error) {
 	switch msgType {
 	case Conclave:
 		return parseMessage[ConclaveData](raw)
+	case Inconclusive:
+		return parseMessage[InconclusiveData](raw)
 	case Vote:
 		return parseMessage[VoteData](raw)
-	case Ping, Pong, Joined, Left:
-		return parseMessage[UnitMsg](raw)
+	case Ping, Pong, Joined, Left, LeaderUnreachable:
+		return parseMessage[UnitData](raw)
 	case SetLeader, LeaderElected:
 		return parseMessage[SetLeaderData](raw)
 	case Clipboard:
