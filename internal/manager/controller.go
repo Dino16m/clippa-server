@@ -121,17 +121,33 @@ func (mc *ManagerCtrl) GetParty(w http.ResponseWriter, r *http.Request) {
 }
 
 func getPartyRequest(r *http.Request) (GetPartyRequest, error) {
-	id := r.URL.Query().Get("id")
-	secret := r.Header.Get("X-Secret")
-	id = strings.TrimSpace(id)
-	secret = strings.TrimSpace(secret)
-	if id == "" || secret == "" {
-		return GetPartyRequest{}, errors.New("id and secret are required")
+	request := GetPartyRequest{}
+	err := json.NewDecoder(r.Body).Decode(&request)
+	return request, err
+}
+
+func (mc *ManagerCtrl) ValidateMembership(w http.ResponseWriter, r *http.Request) {
+	request := AuthRequest{}
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
 	}
-	return GetPartyRequest{
-		ID:     id,
-		Secret: secret,
-	}, nil
+
+	storedPartyID := mc.authStore.GetPartyId(request.Token)
+	if storedPartyID == "" {
+		mc.logger.Info("Party id not found for token")
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if storedPartyID != request.ID {
+		mc.logger.Info("Party id mismatch")
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	mc.authStore.DeleteToken(request.Token)
+	WriteJson(w, http.StatusOK, nil)
 }
 
 func (mc *ManagerCtrl) Authenticate(w http.ResponseWriter, r *http.Request) {
@@ -165,7 +181,7 @@ func (mc *ManagerCtrl) Authenticate(w http.ResponseWriter, r *http.Request) {
 	WriteJson(w, http.StatusOK, resp)
 }
 
-func (mc *ManagerCtrl) validatePartyMembership(w http.ResponseWriter, r *http.Request) (string, error) {
+func (mc *ManagerCtrl) getAuthorizedParty(w http.ResponseWriter, r *http.Request) (string, error) {
 	// Validate token and party id from the websocket URL before upgrading
 	q := r.URL.Query()
 	token := strings.TrimSpace(q.Get("token"))
@@ -197,9 +213,11 @@ func (mc *ManagerCtrl) JoinParty(w http.ResponseWriter, r *http.Request) {
 
 	memberId := strings.TrimSpace(r.URL.Query().Get("memberId"))
 	if memberId == "" {
-		memberId = uuid.New().String()
+		mc.logger.Error("Member id is required")
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
-	storedPartyID, err := mc.validatePartyMembership(w, r)
+	storedPartyID, err := mc.getAuthorizedParty(w, r)
 	if err != nil {
 		return
 	}
@@ -269,6 +287,7 @@ func (mc *ManagerCtrl) RegisterRoutes(globalMux *http.ServeMux) {
 	localMux.HandleFunc("POST /", mc.CreateParty)
 	localMux.HandleFunc("GET /", mc.GetParty)
 	localMux.HandleFunc("GET /join", mc.JoinParty)
-	localMux.HandleFunc("GET /auth", mc.Authenticate)
+	localMux.HandleFunc("POST /auth", mc.Authenticate)
+	localMux.HandleFunc("POST /validate", mc.ValidateMembership)
 	globalMux.Handle("/parties/", http.StripPrefix("/parties", localMux))
 }

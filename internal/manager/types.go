@@ -14,7 +14,7 @@ type GetPartyRequest struct {
 
 type AuthRequest struct {
 	ID     string `json:"id"`
-	Secret string `json:"secret"`
+	Token string `json:"token"`
 }
 
 type AuthResponse struct {

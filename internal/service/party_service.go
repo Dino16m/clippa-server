@@ -147,6 +147,7 @@ func (p *PartyService) sendMessage(senderId string, msg []byte) {
 	p.outboxMutex.RLock()
 	defer p.outboxMutex.RUnlock()
 	p.logger.Infof("sending message to %d outboxes", len(p.outboxes)-1)
+	closedOutboxes := [] string{}
 	for id, outbox := range p.outboxes {
 		if id == senderId {
 			continue
@@ -158,9 +159,13 @@ func (p *PartyService) sendMessage(senderId string, msg []byte) {
 			p.logger.Infof("forwarded message to %s", id)
 		case <-timer.C:
 			p.logger.Infof("timed out forwarding message to %s", id)
+			closedOutboxes = append(closedOutboxes, id)
 			close(outbox)
-			return
 		}
+	}
+
+	for _, outboxId := range closedOutboxes {
+		delete(p.outboxes, outboxId)
 	}
 }
 
