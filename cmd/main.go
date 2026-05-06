@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/dino16m/clippa-server/internal/data"
-	"github.com/dino16m/clippa-server/internal/manager"
+	manager "github.com/dino16m/clippa-server/internal/parties"
 	"github.com/glebarez/sqlite"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"

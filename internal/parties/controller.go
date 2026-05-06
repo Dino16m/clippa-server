@@ -122,6 +122,12 @@ func (mc *ManagerCtrl) GetParty(w http.ResponseWriter, r *http.Request) {
 
 func getPartyRequest(r *http.Request) (GetPartyRequest, error) {
 	request := GetPartyRequest{}
+
+	if r.URL.Query().Get("id") != "" && r.Header.Get("X-Secret") != "" {
+		request.ID = r.URL.Query().Get("id")
+		request.Secret = r.Header.Get("X-Secret")
+		return request, nil
+	}
 	err := json.NewDecoder(r.Body).Decode(&request)
 	return request, err
 }
@@ -210,7 +216,7 @@ func (mc *ManagerCtrl) getAuthorizedParty(w http.ResponseWriter, r *http.Request
 }
 
 func (mc *ManagerCtrl) JoinParty(w http.ResponseWriter, r *http.Request) {
-
+	mc.logger.Info("init joining party")
 	memberId := strings.TrimSpace(r.URL.Query().Get("memberId"))
 	if memberId == "" {
 		mc.logger.Error("Member id is required")
@@ -219,8 +225,10 @@ func (mc *ManagerCtrl) JoinParty(w http.ResponseWriter, r *http.Request) {
 	}
 	storedPartyID, err := mc.getAuthorizedParty(w, r)
 	if err != nil {
+		mc.logger.WithError(err).Error("failed to get authorized party")
 		return
 	}
+	mc.logger.WithField("id", storedPartyID).Info("joining party")
 
 	conn, err := websocket.Accept(w, r, nil)
 	if err != nil {
@@ -262,21 +270,25 @@ func (mc *ManagerCtrl) JoinParty(w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				return
 			}
-			ctxWithTimeout, cancel := context.WithTimeout(ctx, 1*time.Second)
-			defer cancel()
-			if err := conn.Write(ctxWithTimeout, websocket.MessageText, msg); err != nil {
-				return
-			}
+			go func(msg []byte) {
+				ctxWithTimeout, cancel := context.WithTimeout(ctx, 1*time.Second)
+				defer cancel()
+				if err := conn.Write(ctxWithTimeout, websocket.MessageText, msg); err != nil {
+					return
+				}
+			}(msg)
 		case msg, ok := <-outbox:
 			if !ok {
 				return
 			}
-			err = partyHandle.HandleMessage(msg)
-			if err != nil {
-				ctxWithTimeout, cancel := context.WithTimeout(ctx, 1*time.Second)
-				defer cancel()
-				conn.Write(ctxWithTimeout, websocket.MessageText, service.ErrorMessage(err.Error()))
-			}
+			go func(msg []byte) {
+				err = partyHandle.HandleMessage(msg)
+				if err != nil {
+					ctxWithTimeout, cancel := context.WithTimeout(ctx, 1*time.Second)
+					defer cancel()
+					conn.Write(ctxWithTimeout, websocket.MessageText, service.ErrorMessage(err.Error()))
+				}
+			}(msg)
 		}
 	}
 }

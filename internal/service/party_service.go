@@ -16,14 +16,13 @@ type PartyHandle struct {
 }
 
 func (p *PartyHandle) HandleMessage(msg []byte) error {
-	p.logger.Info("Received message")
 	incomingType, err := getMessageType(msg)
 	if err != nil {
 		p.logger.WithError(err).Error("invalid message type")
 		return ErrInvalidMessage
 	}
 
-	p.logger.WithField("msgType", incomingType).Info("Got message type")
+	p.logger.WithField("msgType", incomingType).Info("Forwarding message")
 	obj, err := validateMessage(incomingType, msg)
 	if err != nil {
 		p.logger.WithError(err).Error("invalid message")
@@ -146,7 +145,8 @@ func (p *PartyService) sendMessage(senderId string, msg []byte) {
 	p.logger.Info("forwarding")
 	p.outboxMutex.RLock()
 	defer p.outboxMutex.RUnlock()
-	p.logger.Infof("sending message to %d outboxes", len(p.outboxes)-1)
+
+	p.logger.Infof("sending message to %d outboxes", max(len(p.outboxes)-1, 0))
 	closedOutboxes := [] string{}
 	for id, outbox := range p.outboxes {
 		if id == senderId {
