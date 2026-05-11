@@ -1,4 +1,4 @@
-package manager
+package parties
 
 import "github.com/google/uuid"
 

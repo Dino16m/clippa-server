@@ -1,4 +1,4 @@
-package manager_test
+package parties_test
 
 import (
 	"bytes"
@@ -17,7 +17,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/dino16m/clippa-server/internal/data"
-	"github.com/dino16m/clippa-server/internal/manager"
+	manager "github.com/dino16m/clippa-server/internal/parties"
 )
 
 func createParty(t *testing.T, base, name, secret string) string {
