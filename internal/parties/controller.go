@@ -266,7 +266,7 @@ func (mc *ManagerCtrl) JoinParty(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-ctx.Done():
 			return
-		case msg, ok := <-partyHandle.Inbox():
+		case msg, ok := <-partyHandle.Outbox():
 			if !ok {
 				return
 			}

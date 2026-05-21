@@ -10,7 +10,7 @@ import (
 
 type PartyHandle struct {
 	partyService *PartyService
-	inbox        chan []byte
+	outbox        chan []byte
 	id           string
 	logger       *logrus.Logger
 }
@@ -40,13 +40,13 @@ func (p *PartyHandle) handleInternal(msgType MessageType, msg any) {
 		message := msg.(Message[SetLeaderData])
 		err := p.partyService.setLeader(message.Data.Address)
 		if err != nil {
-			p.inbox <- ErrorMessage(ErrLeaderNotSet.Error())
+			p.outbox <- ErrorMessage(ErrLeaderNotSet.Error())
 		}
 	}
 	if msgType == Conclave {
 		err := p.partyService.resetLeader()
 		if err != nil {
-			p.inbox <- ErrorMessage(ErrLeaderNotSet.Error())
+			p.outbox <- ErrorMessage(ErrLeaderNotSet.Error())
 		}
 	}
 }
@@ -60,8 +60,8 @@ func (p *PartyHandle) ID() string {
 	return p.id
 }
 
-func (p *PartyHandle) Inbox() <-chan []byte {
-	return p.inbox
+func (p *PartyHandle) Outbox() <-chan []byte {
+	return p.outbox
 }
 
 type PartyService struct {
@@ -116,7 +116,7 @@ func (p *PartyService) join(memberId string) *PartyHandle {
 
 	handle := &PartyHandle{
 		partyService: p,
-		inbox:        outbox,
+		outbox:        outbox,
 		id:           memberId,
 		logger:       p.logger,
 	}
